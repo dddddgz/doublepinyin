@@ -1,5 +1,34 @@
 # DoublePinyin 双拼练习器
 
+## 版本信息
+
+<table>
+  <tr>
+    <th colspan=3>日期</th>
+    <th rowspan=2>版本</th>
+    <th rowspan=2>更改</th>
+  </tr>
+  <tr>
+    <th>年</th>
+    <th>月</th>
+    <th>日</th>
+  </tr>
+  <tr>
+    <td>2025</td>
+    <td>4</td>
+    <td>3</td>
+    <td>1.0.0</td>
+    <td>初次提交，有“键位图”“练习”“设置”三个界面。</td>
+  </tr>
+  <tr>
+    <td>2025</td>
+    <td>4</td>
+    <td>3</td>
+    <td>1.0.1</td>
+    <td>添加了更新功能。</td>
+  </tr>
+</table>
+
 ## 创作背景
 
 长篇大论，不要看直接跳过。
@@ -51,6 +80,10 @@ python3 main.py
 ## 使用文档
 
 https://fishc.com.cn/thread-249454-1-1.html
+
+如果您发现了 bug 或有更好的改进建议，请提出 Issue。
+
+尽量不要使用 Pull Request，因为我对 GitHub 这方面的操作还比较生疏，怕搞错。
 
 ## 技术性文档
 

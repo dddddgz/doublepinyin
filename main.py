@@ -1,8 +1,9 @@
-import os, json, pypinyin, re, random, requests
+import os, json, pypinyin, re, random, requests, subprocess as sp
 from ttkbootstrap import *
 from tkinter import messagebox as msb, filedialog as fd, TclError
 get_pinyins = lambda text, tone=True: pypinyin.pinyin(text, (pypinyin.NORMAL, pypinyin.TONE)[tone], True, v_to_u=True)
 get_pinyin = lambda text, tone=True: pypinyin.pinyin(text, (pypinyin.NORMAL, pypinyin.TONE)[tone], v_to_u=True)
+VERSION = '1.0.0'
 
 class Plan:
     """双拼方案类"""
@@ -295,6 +296,21 @@ def new_plan():
     cancelb.place(x=68, y=860)
     top.mainloop()
 
+def check_update():
+    """检查更新"""
+    try:
+        newest = list(map(int, json.load(requests.get('https://dddddgz.github.io/versions.json').text)['doublepinyin'].split('.')))
+        if newest > list(map(int, VERSION.split('.'))):
+            if msb.askyesno('提示', f'可以更新至 V{newest}！是否更新？'):
+                # 可以更新了！
+                window.destroy()
+                os.chdir('..')
+                sp.call(['git', 'clone', 'https://github.com/dddddgz/doublepinyin'])
+        else:
+            msb.showinfo('信息', '未发现新版本。')
+    except BaseException as ex:
+        msb.showerror('错误', repr(ex))
+
 def switch_to(index):
     """
     获取执行“切换到指定页面”任务的函数
@@ -439,6 +455,12 @@ newb = Button(planslf, text='新方案', command=new_plan, bootstyle='info')
 newb.place(x=198, y=10)
 
 planslf.place(x=10, y=160)
+versionlf = Labelframe(settingsf, text='版本相关', width=980, height=70)
+
+checkupdateb = Button(versionlf, text='检查更新', command=check_update, bootstyle='primary')
+checkupdateb.place(x=10, y=10)
+
+versionlf.place(x=10, y=240)
 frames = [keymapf, practicef, settingsf]
 switch_to(0)()
 
