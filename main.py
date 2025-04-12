@@ -1,7 +1,8 @@
 import os, json, pypinyin, re, random, requests
 from ttkbootstrap import *
-from tkinter import messagebox as msb, filedialog as fd, TclError
+from tkinter import messagebox as msb, filedialog as fd, TclError, Checkbutton
 from itertools import product
+from threading import Timer
 
 def get_pinyins(text, tone=True) -> list[str]:
     result = pypinyin.pinyin(text, (pypinyin.NORMAL, pypinyin.TONE)[tone], True, v_to_u=True)
@@ -38,6 +39,25 @@ def make_pairs(*lists, merge=False) -> list:
         return list(map(''.join, result))
     return result
 
+class Animation:
+    """动画效果类"""
+    def __init__(self, func, times):
+        """
+        初始化方法
+        :param func: 执行动画效果的函数
+        :param times: 执行次数
+        """
+        self.func = func
+        self.counter = 0
+        self.stop = times
+    
+    def execute(self):
+        """动画效果实际执行的方法"""
+        self.func()
+        self.counter += 1
+        if self.counter < self.stop:
+            Timer(1 / 60, self.execute).start()
+
 def set_page(index):
     """
     获取执行“切换到指定页面”任务的函数
@@ -46,10 +66,7 @@ def set_page(index):
     """
     def inner():
         for i, frame in enumerate(frames):
-            if i == index:
-                frame.place(x=0, y=50)
-            else:
-                frame.place_forget()
+            frame.place(x=(i - index) * 1000, y=50)
     return inner
 
 class Plan:
@@ -57,6 +74,7 @@ class Plan:
     def __init__(self, f):
         self.json = json.load(f)
         self.name = self.json.pop('name')
+        self.jqxy_not_u = self.json.pop('jqxy_not_u')
 
     def __str__(self):
         # 通过 __str__ 让 OptionMenu 的参数可以直接使用方案而不需要提取其 name 属性
@@ -102,7 +120,7 @@ class Plan:
                     if len(p1) > 1:
                         # 是 zh ch sh 就改变刚才的判断
                         k1s = plan.find_keys(p1)
-                    if p1 in 'jqxy' and p2 == 'ü':
+                    if p1 in 'jqxy' and p2 == 'ü' and not self.jqxy_not_u:
                         # 这时，ü 也可以使用 u 对应的键
                         k2s.extend(plan.find_keys('u'))
                     # 用指定的双拼方案表示这个读音有这些方法
@@ -273,9 +291,9 @@ def new_plan():
         texts = texts.split()
         for i, text in enumerate(texts):
             label = Label(master, text=text, font=gfont(12))
-            label.place(x=10, y=(10 + i * 30))
+            label.place(x=10, y=10 + i * 30)
             entry = Entry(master, bootstyle=bootstyle)
-            entry.place(x=50, y=(10 + i * 30))
+            entry.place(x=50, y=10 + i * 30)
             widgets.append((label, entry))
     def create():
         """创建按钮的 command"""
@@ -291,6 +309,7 @@ def new_plan():
                 top.focus_set()
                 return
             data[label['text']] = entry.get()
+        data['jqxy_not_u'] = notuv.get()
         path = fd.asksaveasfilename(title='保存方案', filetypes=(('JSON', '*.json'),), initialdir='plans',
                                     defaultextension='.json', parent=top)
         if path:
@@ -321,6 +340,10 @@ def new_plan():
     zerolf = Labelframe(top, text='零声母', width=240, height=400)
     adds(zerolf, DANGER, '_a _o _e _ai _ei _ao _ou _er _an _en _ang _eng')
     zerolf.place(x=10, y=450)
+    # 是否禁止 jqxy 后的 ü 使用 u
+    notuv = BooleanVar(None, False)
+    notucb = Checkbutton(top, text='禁止 jqxy 后的 ü 使用 u', font=gfont(12), variable=notuv)
+    notucb.place(x=120, y=860)
     # 几个按钮
     createb = Button(top, text='创建', command=create, bootstyle=SUCCESS)
     createb.place(x=10, y=860)
@@ -366,7 +389,7 @@ keymapb = Button(switchf, text='键位图', bootstyle=INFO, command=set_page(0))
 keymapb.place(x=20, y=10)
 practiceb = Button(switchf, text='练习', bootstyle=SUCCESS, command=set_page(1))
 practiceb.place(x=90, y=10)
-settingsb = Button(switchf, text='设置', bootstyle=DARK, command=set_page(2))
+settingsb = Button(switchf, text='设置', bootstyle=DANGER, command=set_page(2))
 settingsb.place(x=150, y=10)
 switchf.place(x=0, y=0)
 
@@ -442,6 +465,12 @@ inputv = StringVar()
 inputv.trace_add('write', check_input)
 inpute = Entry(practicef, textvariable=inputv, bootstyle=INFO)
 inpute.place(x=200, y=310)
+tipsl = Label(practicef, text='''作者对拼音的一点小看法：
+1. bo po mo fo 应当改为 buo puo muo fuo
+2. 梦-meng/mong，风-feng/fong，翁-weng/wong，这些字应当被视为多音字
+3. 注音符号不应该把 in ün ing ong iong 注作 ㄧㄣ(ien) ㄩㄣ(üen) ㄧㄥ(ieng) ㄨㄥ(ueng) ㄩㄥ(üeng)，这些发音不符合现代发音了
+4. iou uei uen 应该按照实际发音拼写（不简写）''', bootstyle=SECONDARY)
+tipsl.place(x=10, y=500)
 
 settingsf = Frame(window, width=1000, height=700)
 
@@ -496,11 +525,6 @@ funfactb.place(x=10, y=10)
 funfactl = Label(funfactlf, text='', font=gfont(12))
 funfactl.place(x=60, y=10)
 funfactlf.place(x=10, y=330)
-
-versionlf = Labelframe(settingsf, text='版本相关（施工中，请等待后续版本）', width=980, height=70)
-checkupdateb = Button(versionlf, text='检查更新', state=DISABLED, bootstyle=INFO)
-checkupdateb.place(x=10, y=10)
-versionlf.place(x=10, y=420)
 frames = [keymapf, practicef, settingsf]
 set_page(0)()
 

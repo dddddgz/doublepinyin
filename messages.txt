@@ -1,7 +1,7 @@
 本程序中的所有双拼方案都是从 https://api.ihint.me/shuang 找到的。（好吧，至少目前）
 一些双拼方案暂时还没有被本程序收录的原因是它们放到键位图里会很难看……比如“C 双拼”。
 那张键位图是 Win + Ctrl + O 的屏幕键盘里截下来的。
-检查更新功能用不了是因为作者忘记怎么使用 GitHub Pages（用于保存 versions.json）了。
+不能检查更新是因为 requests.get() 爬取 dddddgz.github.io 总是报错。
 “双拼方案”一度成为作者所用输入法里经常使用的词汇。（因为要写注释）
 作者感到不写注释很舒服，但写了注释可以练习双拼打字（不忘初心）。
 这条内容是用来凑数的。
@@ -12,3 +12,4 @@
 本来这玩意要做成网页版发在 dddddgz.github.io 上的，但是 JS 拼音一直没被作者搞清楚，所以就写成 Python 版了。
 本程序差点用 PyQt 做，幸好 PyCharm 非常及时的（抽风）不认 QWidget/QMainWindow.setWindowTitle 等方法，就改用 Tkinter/Ttkbootstrap 了。
 IndexError: Cannot choose from an empty sequence. shei shang dang le?
+DoubelPinyin
