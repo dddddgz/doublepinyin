@@ -10,6 +10,6 @@
 搜狗双拼和微软双拼曾经共用同一个文件 weiruansougou.json（因为当时没做好一个拼音对应多个按键）。
 为了做到一个拼音对应多个按键，作者重写了 Plan.get_code() 方法。（大脑一下子得到了充分的训练）
 本来这玩意要做成网页版发在 dddddgz.github.io 上的，但是 JS 拼音一直没被作者搞清楚，所以就写成 Python 版了。
-本程序差点用 PyQt 做，幸好 PyCharm 非常及时的（抽风）不认 QWidget/QMainWindow.setWindowTitle 等方法，就改用 Tkinter/Ttkbootstrap 了。
+本程序差点用 PyQt 做，幸好 PyCharm 非常及时地（抽风）不认 QWidget/QMainWindow.setWindowTitle 等方法，就改用 Tkinter/Ttkbootstrap 了。
 IndexError: Cannot choose from an empty sequence. shei shang dang le?
 DoubelPinyin
