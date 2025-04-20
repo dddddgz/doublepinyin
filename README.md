@@ -91,10 +91,10 @@
   <tr><td>微调组件的配色、位置和字体</td></tr>
   <tr><td>更正了一条“你知道吗”的错别字</td></tr>
   <tr>
-    <td rowspan=3>2025</td>
-    <td rowspan=3>4</td>
-    <td rowspan=3>20</td>
-    <td rowspan=3>1.3.0【最新版本】</td>
+    <td rowspan=13>2025</td>
+    <td rowspan=13>4</td>
+    <td rowspan=13>20</td>
+    <td rowspan=13>1.3.0【最新版本】</td>
     <td>回退了大部分 1.2.2 简写到可读性极差的代码</td>
   </tr>
   <tr><td>删除了调用网络 API 生成文字的功能</td></tr>
