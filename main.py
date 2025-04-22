@@ -13,8 +13,8 @@ get_pinyin = lambda text: ''.join(map(lambda x: x[0], get_pinyins(text)))
 
 with open('chars.txt', encoding='utf-8') as f:
     chars = {}
-    for line in f.read().splitlines():
-        p, cs = line.split()
+    for line in f.readlines():
+        p, cs = line.split()[:2]
         for c in cs:
             if c in chars:
                 chars[c].append(p)
@@ -22,8 +22,8 @@ with open('chars.txt', encoding='utf-8') as f:
                 chars[c] = [p]
 with open('chars2.txt', encoding='utf-8') as f:
     chars2 = {}
-    for line in f.read().splitlines():
-        p, cs = line.split()
+    for line in f.readlines():
+        p, cs = line.split()[:2]
         for c in cs:
             chars2[c] = p
 
@@ -102,16 +102,12 @@ class MoveAnimation(Animation):
     
     @property
     def widget_pos(self) -> tuple[int, int]:
-        info = self.widget.place_info()
-        return int(info['x']), int(info['y'])
+        return int((info := self.widget.place_info())['x']), int(info['y'])
     
     def move(self) -> None:
         """平移"""
         (x, y), (tx, ty), (dx, dy) = self.widget_pos, self.target, self.step
-        if x > tx:
-            dx *= -1
-        if y > ty:
-            dy *= -1
+        dx, dy = abs(dx) * pow(-1, x > tx), abs(dy) * pow(-1, y > ty)
         self.widget.place(x=x + dx, y=y + dy)
 
 class TypingAnimation(Animation):
@@ -251,10 +247,8 @@ def load_plans() -> None:
     # 并不需要 global，因为实际上并没有对 plans 进行“赋值”操作
     plans.clear()
     for file in os.listdir('plans'):
-        # plans 文件夹下所有 .json 文件都是双拼方案
-        if file.endswith('.json'):
-            with open(f'plans/{file}', encoding='utf-8') as f:
-                plans.append(Plan(f))
+        with open(f'plans/{file}', encoding='utf-8') as f:
+            plans.append(Plan(f))
 
 plans = []
 load_plans()
@@ -333,24 +327,20 @@ def check_input(*_) -> None:
         # 用户还没输入完
         return
     # 懒得一直加 if（或者 xxx and recordst.insert(...)）了，索性就利用 tkinter 的特性，一直禁着
-    if recordv.get():
-        # 让记录变得可以使用
-        recordst.config(state=NORMAL)
+    recordst.config(state=(DISABLED, NORMAL)[recordv.get()])
     index = recordst.get(1.0, END).count('\n')
-    pinyin = pinyinl['text']
     # recordst 里第 2 行使用的序号使用的是 1.（第一行是表头）
     # index 仍然储存实际位置 2
-    recordst.insert(END, f'{index - 1}.\t{pinyin}\t{value}\t')
+    recordst.insert(END, f'{index - 1}.\t{(pinyin := pinyinl['text'])}\t{value}\t')
     if value in gplan().get_codes(pinyin, True):
-        # 用户输入对了，添加 tag
         recordst.insert(END, f'✓\n')
         recordst.tag_add('correct', float(index), float(index + 1))
         # 对了才能下一个字
         random_char()
     else:
         recordst.insert(END, f'×\n')
-        # 用户输入错了，也要添加 tag
         recordst.tag_add('wrong', float(index), float(index + 1))
+    # 添加 tag 是为了给对错两种情况分别加上绿色和红色
     # 无论用户输入对不对，都应该清空
     inputv.set('')
     # 得防着点用户
@@ -425,27 +415,16 @@ def new_plan() -> None:
     Button(top, text='取消', command=top.destroy, bootstyle=gol(SECONDARY)).place(x=68, y=860)
     top.mainloop()
 
-def set_alpha(alpha):
-    """设置窗口透明度为 alpha"""
+def update_alpha(*_):
+    """更新窗口透明度设置情况"""
+    window.attributes('-alpha', (alpha := alphav.get()) / 100)
     alphal['text'] = f'透明度：{alpha}%'
-    window.attributes('-alpha', alpha / 100)
+    alpha1b['state'] = NORMAL
+    alpha2b['state'] = NORMAL
     if alpha <= 20:
-        alpha1b['state'] = NORMAL
         alpha2b['state'] = DISABLED
-    elif alpha >= 100:
+    if alpha >= 100:
         alpha1b['state'] = DISABLED
-        alpha2b['state'] = NORMAL
-    else:
-        alpha1b['state'] = NORMAL
-        alpha2b['state'] = NORMAL
-
-def alpha_up():
-    """调高窗口透明度"""
-    set_alpha(min(100, int(alphal['text'][4:-1]) + 10))
-
-def alpha_down():
-    """调低窗口透明度"""
-    set_alpha(max(20, int(alphal['text'][4:-1]) - 10))
 
 def change_msg():
     """更换一个“回声洞”内容"""
@@ -573,11 +552,13 @@ newplanb.place(x=92, y=10)
 planslf.place(x=10, y=170)
 
 attrlf = Labelframe(settingsf, text='窗口属性', width=980, height=70)
+alphav = IntVar(value=100)
+alphav.trace_add('write', update_alpha)
 alphal = Label(attrlf, text='透明度：100%')
 alphal.place(x=10, y=10)
-alpha1b = Button(attrlf, text='↑', state=DISABLED, command=alpha_up, bootstyle=gol(INFO))
+alpha1b = Button(attrlf, text='↑', state=DISABLED, command=lambda: alphav.set(alphav.get() + 10), bootstyle=gol(INFO))
 alpha1b.place(x=120, y=10)
-alpha2b = Button(attrlf, text='↓', command=alpha_down, bootstyle=gol(INFO))
+alpha2b = Button(attrlf, text='↓', command=lambda: alphav.set(alphav.get() - 10), bootstyle=gol(INFO))
 alpha2b.place(x=160, y=10)
 attrlf.place(x=10, y=250)
 

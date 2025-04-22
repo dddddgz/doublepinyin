@@ -110,10 +110,10 @@
   <tr><td>移除“作者对拼音的一点小看法”</td></tr>
   <tr><td>修改了键位图界面的布局，使其更加智能和美观</td></tr>
   <tr>
-    <td rowspan=8>2025</td>
-    <td rowspan=8>4</td>
-    <td rowspan=8>21</td>
-    <td rowspan=8>1.3.1【最新版本】</td>
+    <td rowspan=9>2025</td>
+    <td rowspan=9>4</td>
+    <td rowspan=9>21</td>
+    <td rowspan=9>1.3.1</td>
     <td>更换了新的键位图，并给声母 bpmfdtnlgkhjqxzcsr 对应的按键都以 #00a0e0 标上了声母</td>
   </tr>
   <tr><td>绘制键位图时给 zh ch sh 标上 #00a0e0，给韵母标上 #808080</td></tr>
@@ -123,6 +123,14 @@
   <tr><td>修复重复使用同一个变量名引起的 bug（下面“已知 bug”第七条）</td></tr>
   <tr><td>初步完成“练习记录”功能</td></tr>
   <tr><td>微调部分组件配色</td></tr>
+  <tr><td>删除了设置界面“查看当前方案”功能</td></tr>
+  <tr>
+    <td>2025</td>
+    <td>4</td>
+    <td>22</td>
+    <td>1.3.2【最新版本】</td>
+    <td>精简代码逻辑，由 594 行精简至 575 行</td>
+  </tr>
 </table>
 
 ### 已知 bug
