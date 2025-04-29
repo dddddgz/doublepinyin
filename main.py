@@ -1,16 +1,17 @@
 import os, json, random, time, re
 from ttkbootstrap import *
-from tkinter import messagebox as msb, filedialog as fd, Checkbutton
+# ttkbootstrap 那搞来的 Checkbutton 创建后会终止程序并没有报错，只好改用 tkinter 自带的
+from tkinter import filedialog as fd, Checkbutton
 from itertools import product
 from threading import Thread
 from webbrowser import open_new_tab as OT
 
-#########################################################
-## 本 repo 中声母包含了 y、w，共 23 个                 ##
-## 本 repo 中韵母不包含从不出现在声母之后的 io、ueng   ##
-## 本 repo 中零声母指可以单独使用的 a、o、e 开头的韵母 ##
-## 本 repo 中 zh ch sh“零韵母”情况韵母按 i 处理        ##
-#########################################################
+###########################################################
+## 本 repo 中声母包含了 y、w，共 23 个                   ##
+## 本 repo 中韵母不包含从不出现在声母之后的 io、ueng、er ##
+## 本 repo 中零声母指可以单独使用的以 a、o、e 开头的韵母 ##
+## 本 repo 中 zh ch sh“零韵母”情况韵母按 i 处理          ##
+###########################################################
 
 # VERSION = (1, 3, 3)                                       # 当前程序版本
 VERSION_S = '1.3.3'                                         # 当前程序版本的字符串形式
@@ -21,41 +22,17 @@ C_SHENG = {'background': '#fff', 'foreground': '#00a0e0'}   # 键位图上声母
 C_YUN = {'background': '#fff', 'foreground': '#808080'}     # 键位图上韵母的颜色
 PASS = lambda: None                                         # 几个常用的 callable
 R_TRUE = lambda: True
-GP = lambda: [plan for plan in plans if plan.name == planv.get()][0]
+PL = lambda: [plan for plan in plans if plan.name == planv.get()][0]
 FT = lambda fontsize: ('更纱黑体 SC', fontsize, NORMAL)
 OL = lambda bootstyle: (bootstyle, OUTLINE)
-PYS = lambda text: [CHARS[char] for char in text]
-PY = lambda text: ''.join(map(lambda x: x[0], PYS(text)))
-with open('chars.txt', encoding='utf-8') as f:
-    CHARS = {}
-    for line in f.readlines():
-        p, cs = line.split()[:2]
-        for c in cs:
-            if c in CHARS:
-                CHARS[c].append(p)
-            else:
-                CHARS[c] = [p]
 with open('chars2.txt', encoding='utf-8') as f:
     PCHARS = {}
     for line in f.readlines():
         p, cs = line.split()[:2]
         [PCHARS.__setitem__(c, p) for c in cs]
-del p, cs, c, line
-
-def schedule(interval: int | float, func) -> None:
-    """在 interval 秒后执行 func"""
-    Thread(target=lambda: (time.sleep(interval), func()), daemon=True).start()
-
-def make_pairs(*lists, merge: bool = False) -> list:
-    """
-    将所有参数中的所有元素进行搭配
-    :param merge: 是否合并元素（例如 make_pairs(['1', '2'], ['3', '4'], merge=True) -> ['13', '14', '23', '24']）
-    :return: 搭配结果
-    """
-    result = list(product(*lists))
-    if merge:
-        return list(map(''.join, result))
-    return result
+with open('messages.txt', encoding='utf-8') as f:
+    messages = f.read().splitlines()
+del p, cs, line
 
 # 以便管理动画
 animations = []
@@ -64,7 +41,6 @@ class Animation:
     """动画效果类"""
     def __init__(self, func, stop, on_stop, flag: str = ''):
         """
-        初始化方法
         :param func: 执行动画效果的函数
         :param stop: 停止条件（callable）
         :param flag: 组件“标记”，默认为空，当 flag 不为空时相同的动画只执行最后创建的一个
@@ -98,13 +74,12 @@ class Animation:
         else:
             self.func()
             self.counter += 1
-            schedule(1 / 60, self.execute)
+            Thread(target=lambda: (time.sleep(1 / 60), self.execute()), daemon=True).start()
 
 class MoveAnimation(Animation):
     """平移效果类"""
     def __init__(self, widget, target: tuple[int, int], step: tuple[int, int], flag: str = ''):
         """
-        初始化方法
         :param widget: 要应用效果的组件
         :param target: 组件移动后的位置
         :param step: 每 1 / 60 秒移动的距离
@@ -129,7 +104,6 @@ class TypingAnimation(Animation):
     """打字机效果类"""
     def __init__(self, widget, text: str, flag: str = ''):
         """
-        初始化方法
         :param widget: 要应用效果的组件
         :param text: 文字
         :param flag: 组件“标记”，默认为空，当 flag 不为空时相同的动画只执行最后创建的一个
@@ -140,7 +114,8 @@ class TypingAnimation(Animation):
 
 def set_page(index, animation=True):
     """
-    set_page() 是一个获取执行“切换到指定页面”任务的函数的函数
+    获取切换到指定页面的函数
+
     :param index: 页面的索引
     :param animation: 是否播放动画
     :return: 执行上述任务的函数
@@ -158,7 +133,7 @@ class Plan:
     def __init__(self, f):
         self.json = json.load(f)
         self.name = self.json.pop('name')
-        self.jqxy_not_u = self.json.pop('jqxy_not_u')
+        self.flags = self.json.pop('flags').split()
 
     def __str__(self):
         # 通过 __str__ 让 OptionMenu 的参数可以直接使用方案而不需要提取其 name 属性
@@ -167,6 +142,7 @@ class Plan:
     def find_keys(self, pin) -> list[str]:
         """
         根据拼音寻找按键
+
         :param pin: 拼音
         :return: 按键列表
         """
@@ -175,54 +151,48 @@ class Plan:
     def find_pins(self, key) -> list[str]:
         """
         根据按键寻找拼音
+
         :param key: 按键
         :return: 拼音列表
         """
         return [pin for pin, keys in self.json.items() if key in keys.split(',')]
 
-    def get_codes(self, text: str, pinyin=False, max_length=100) -> list:
+    def get_codes(self, pin: str) -> list[str]:
         """
-        获取一个/多个汉字的双拼输入方法
-        :param text: 一个/多个汉字，或者一个拼音
-        :param pinyin: text 是否是拼音
-        :param max_length: 最多返回的数量（默认返回 100 个）
-        :return: 双拼输入方法
+        获取一个拼音 pin 的双拼输入按键
+
+        :return: 双拼输入按键
         """
-        # get_pinyins(...) -> 类似 [[a, b], # 一行代表一个字的所有读音
-        #                           [c, d],
-        #                           [e, f]]
-        pinyins = [[text]] if pinyin else PYS(text)
-        results, fks = [], GP().find_keys
-        for char in pinyins:
-            results.append([])
-            for pinyin in char:
-                p1, p2 = split_pinyin(pinyin)
-                if p1:
-                    # 不是零声母
-                    k1s, k2s = fks(p1), fks(p2)
-                    if p1 in 'jqxy' and p2 == 'ü' and not self.jqxy_not_u:
-                        # 这时，ü 也可以使用 u 对应的键
-                        k2s.extend(fks('u'))
-                    results[-1].extend(make_pairs(k1s, k2s, merge=True))
-                else:
-                    # 零声母
-                    results[-1].extend(self.find_keys(f'_{p2}'))
-            # 现在，result[i] 代表第 (i + 1) 个（第 i 个？）字所有可能的输入方式
-        return make_pairs(*results, merge=True)[:max_length]
+        if pin == 'hng':
+            # 特殊处理
+            return ['hg']
+        results, fks = [], self.find_keys
+        jqxy_not_u = 'jqxy_not_u' in self.flags
+        p1, p2 = split_pinyin(pin)
+        if p1:
+            # 不是零声母
+            k1s, k2s = fks(p1), fks(p2)
+            if p1 in 'jqxy' and p2 == 'ü' and not jqxy_not_u:
+                # 这时，ü 也可以使用 u 对应的键
+                k2s.extend(fks('u'))
+            results.extend(list(map(''.join, product(k1s, k2s))))
+        else:
+            # 零声母
+            results.extend(fks(f'_{p2}'))
+        return results
 
     def draw_keys(self) -> None:
         """给键盘绘制对应的拼音"""
         # 删除以前绘制的
-        [label.place_forget() for label in keylabels]
-        keylabels.clear()
+        while keylabels and (keylabels.pop().destroy(),):
+            pass
         # 记录每个 Label 上拼音的位置
         positions = {}
         for i in range(10):
             positions['qwertyuiop'[i]] = [i * 80 + 35, 60]
-            positions['asdfghjkl;'[i]] = [i * 80 + 65, 140]
-            positions['zxcvbnm   '[i]] = [i * 80 + 110, 220]
+            positions['asdfghjkl;'[i]] = [i * 80 + 70, 140]
+            positions['zxcvbnm   '[i]] = [i * 80 + 105, 220]
         del positions[' ']
-        pinfont = '更纱黑体 SC', 12, NORMAL
         # 记录每个按键对应的韵母
         keyyuns = {k: [] for k in KEYS}
         zerol['text'] = '零声母情况：\n'
@@ -236,7 +206,7 @@ class Plan:
                 for key in keys:
                     # 和其他声母一样，直接往按键上标就行了
                     x, y = positions[key]
-                    label = Label(keymapf, text=pin, font=pinfont, **C_SHENG)
+                    label = Label(keymapf, text=pin, font=FT(12), **C_SHENG)
                     label.place(x=x, y=y)
                     keylabels.append(label)
                     # 轮到韵母使用这个键了
@@ -252,41 +222,67 @@ class Plan:
             else:
                 # 要加逗号显示
                 text = f'{','.join(yuns[:2])}\n{','.join(yuns[2:])}'
-            label = Label(keymapf, text=text, font=pinfont, **C_YUN)
+            label = Label(keymapf, text=text, font=FT(12), **C_YUN)
             label.place(x=x, y=y)
             keylabels.append(label)
+    
+    def apply(self) -> None:
+        """设为当前双拼方案"""
+        self.draw_keys()
+        keytipcb.toggle()
+        keytipcb.toggle()
 
-def load_plans() -> None:
-    """加载所有双拼方案"""
-    # 并不需要 global，因为实际上并没有对 plans 进行“赋值”操作
-    plans.clear()
-    for file in os.listdir('plans'):
-        with open(f'plans/{file}', encoding='utf-8') as f:
-            plans.append(Plan(f))
-
-plans = []
-load_plans()
-with open('messages.txt', encoding='utf-8') as f:
-    messages = f.read().splitlines()
-
-def split_pinyin(pinyin: str) -> tuple[str, str]:
+def is_valid_pinyin(pin: str) -> bool:
     """
-    将 pinyin 拆分为声母部分和韵母部分
+    检查 pin 是不是一个合法的拼音（不检查是否能拼得出来；“边缘拼音”只认 hm hng 和 ng）
+    
+    :return: True/False
+    """
+    if not (pin := re.sub(r'([jqxy])u', r'\1ü', pin.replace('v', 'ü'))):
+        # 拼音为空
+        return False
+    if pin in 'a o e ai ei ao ou er an en ang eng hm hng ng'.split():
+        return True
+    if pin[0] in 'iuü':
+        # 拼音以 i/u/ü 开头
+        return False
+    if pin[0] in SHENGS1:
+        # 不是零声母
+        if len(pin) < 2:
+            # 没有韵母
+            return False
+        # 提取韵母，接下来只要判断韵母就行了
+        if pin[1] == 'h':
+            # 翘舌音，不要前两个字母
+            yun = pin[2:]
+        else:
+            # 单字母的声母，不要第一个字母
+            yun = pin[1:]
+        # 只要判断韵母是否正常就行了
+        return yun in 'a o e i u ü ai ei ui ao ou iu ie üe an en in un ün \
+ang eng ing ong ia ua uo uai iao ian uan üan iang uang iong'.split()
+    # 很难想象哪个拼音能通过这么多关卡来到这里
+    return False
+
+def split_pinyin(pin: str) -> tuple[str, str]:
+    """
+    将 pin 拆分为声母部分和韵母部分
+
     :return: (声母, 韵母)
     """
-    pinyin = re.sub(r'([jqxy])u', r'\1ü', pinyin)
-    if pinyin[0] in 'aoe':
-        # 零声母
-        return '', pinyin
-    if pinyin[1] == 'h':
-        # 第二个字母是 h 代表是翘舌音，以翘舌音为界即可
-        return pinyin[:2], pinyin[2:]
-    return pinyin[0], pinyin[1:]
+    pin = re.sub(r'([jqxy])u', r'\1ü', pin.replace('v', 'ü'))
+    # 零声母
+    if pin[0] in 'aoe':
+        return '', pin
+    # 第二个字母是 h 代表是翘舌音，以翘舌音为界即可
+    if pin[1] == 'h':
+        return pin[:2], pin[2:]
+    return pin[0], pin[1:]
 
 def find_keys(*_) -> None:
     """根据音节寻找按键"""
     # 允许用户使用 v 代替 ü；用 list 避免 '' 或 'bp' 也被识别为第一种情况
-    if result := GP().find_keys(find1v.get().replace('v', 'ü')):
+    if result := PL().find_keys(find1v.get().replace('v', 'ü')):
         find1l['text'] = ','.join(result)
     else:
         # 找不到
@@ -295,19 +291,16 @@ def find_keys(*_) -> None:
 def find_pins(*_) -> None:
     """根据按键寻找音节"""
     if (key := find2e.get().lower()) in KEYS:
-        find2l['text'] = ','.join(GP().find_pins(key))
+        find2l['text'] = ','.join(PL().find_pins(key))
     else:
         find2l['text'] = '-'
 
-def get_codes() -> None:
-    if not (value := find3e.get()):
-        # 用户什么也没输入
-        return
-    for char in value:
-        if char not in CHARS:
-            msb.showerror('错误', f'无法解析 {repr(char)}')
-            return
-    msb.showinfo('结果', '\n'.join(GP().get_codes(value)))
+def get_codes(*_) -> None:
+    """根据拼音寻找可用的双拼输入按键"""
+    if (value := find3e.get()) and is_valid_pinyin(value):
+        find3l['text'] = ','.join(PL().get_codes(value))
+    else:
+        find3l['text'] = '-'
 
 def random_char() -> None:
     """显示一个随机汉字"""
@@ -319,23 +312,27 @@ def random_char() -> None:
 
 def update_key_tip(*_) -> None:
     """给显示的随机汉字添加按键提示"""
-    if ' ' in pinyinl['text']:
-        # 已经有按键提示了，不需要操作
+    if keytipv.get():
+        # 目标是想办法加上提示
+        if ' ' not in pinyinl['text']:
+            # 还没有提示
+            pinyinl['text'] += f' [{','.join(PL().get_codes(pinyinl['text']))}]'
         return
-    pinyinl['text'] += f' [{','.join(GP().get_codes(pinyinl['text'], True))}]'
+    # 目标是去掉提示
+    pinyinl['text'] = pinyinl['text'].split()[0]
 
 def check_input(*_) -> None:
     """检查显示的拼音所有拼法里是否有用户输入的内容"""
     if len(value := inputv.get()) < 2:
         # 用户还没输入完
         return
-    # 懒得一直加 if（或者 xxx and recordst.insert(...)）了，索性就利用 tkinter 的特性，一直禁着
-    recordst.config(state=(DISABLED, NORMAL)[recordv.get()])
+    # 懒得一直加 if 了，索性就利用 tkinter 的特性，一直禁着
+    recordst['state'] = (DISABLED, NORMAL)[recordv.get()]
     # recordst 里第 2 行使用的序号使用的是 1.（第一行是表头）
     # index 仍然储存实际位置 2
     index = recordst.get(1.0, END).count('\n')
     recordst.insert(END, f'{index - 1}.\t{(pinyin := pinyinl['text'].split()[0])}\t{value}\t')
-    if value in GP().get_codes(pinyin, True):
+    if value in PL().get_codes(pinyin):
         recordst.insert(END, f'✓\n')
         recordst.tag_add('correct', float(index), float(index + 1))
         # 对了才能下一个字
@@ -347,8 +344,19 @@ def check_input(*_) -> None:
     # 无论用户输入对不对，都应该清空
     inputv.set('')
     # 得防着点用户
-    recordst.config(state=DISABLED)
+    recordst['state'] = DISABLED
     recordst.see(END)
+
+def load_plans() -> None:
+    """加载所有双拼方案"""
+    # 并不需要 global，因为实际上并没有对 plans 进行“赋值”操作
+    plans.clear()
+    for file in os.listdir('plans'):
+        with open(f'plans/{file}', encoding='utf-8') as f:
+            plans.append(Plan(f))
+
+plans = []
+load_plans()
 
 def new_plan() -> None:
     """创建新双拼方案功能的 command"""
@@ -362,50 +370,62 @@ def new_plan() -> None:
         :param bootstyle: str，内容为 bootstyle
         :param texts: str
         """
-        labelframe = Labelframe(top, text=title, width=240, height=height)
+        labelframe = Labelframe(top, text=title, width=160, height=height, bootstyle=bootstyle)
         for i, text in enumerate(texts.split()):
             label = Label(labelframe, text=text, font=FT(12))
             label.place(x=10, y=10 + i * 30)
-            entry = Entry(labelframe, bootstyle=bootstyle)
+            entry = Entry(labelframe, width=12, textvariable=(var := StringVar()), bootstyle=bootstyle)
             entry.place(x=50, y=10 + i * 30)
-            widgets.append((label, entry))
+            widgets.append((label, var))
         labelframe.place(x=x, y=y)
     def create() -> None:
         """创建按钮的 command"""
-        if not namee.get():
-            msb.showerror('错误', f'未填写方案名称。')
-            return top.focus_set()
-        data = {'name': namee.get()}
-        for label, entry in widgets:
+        if not (name := namee.get()):
+            statusl['text'] = '未填写方案名称。'
+            return
+        data = {'name': name}
+        for label, var in widgets:
             # “所有 key 都是 a-z 或 ; 的按键”不满足
-            if not all(map(lambda key: key in KEYS, entry.get().split(','))):
+            if not all(map(lambda key: key in KEYS, var.get().split(','))):
                 # 没有填完
-                msb.showerror('错误', f'未填写 {label['text']}。')
-                return top.focus_set()
-            data[label['text']] = entry.get()
-        data['jqxy_not_u'] = notuv.get()
+                statusl['text'] = f'{label['text']} 填写错误。'
+                return 
+            data[label['text']] = var.get()
+        data['flags'] = 'jqxy_not_u' * notuv.get()
+        # 既然程序能运行到这里，那说明什么异常也没有发生
+        statusl['text'] = ''
         if path := fd.asksaveasfilename(title='保存方案', filetypes=(('JSON', '*.json'),), initialdir='plans',
                                         defaultextension='.json', parent=top):
             # 因为含有“ü”，所以需要特别指出 utf-8，不然“ü”会被读取为“眉”
             with open(path, 'w', encoding='utf-8') as f:
                 # ensure_ascii 需要关闭，以免 ü 被替换为 ASCII 码
                 json.dump(data, f, indent=4, ensure_ascii=False)
-    top = Toplevel('新方案', size=(520, 900), resizable=(False, False))
+    def clear() -> None:
+        """清空此前输入的所有内容"""
+        for _, var in widgets:
+            var.set('')
+    top = Toplevel('新方案', size=(900, 480), resizable=(False, False))
     namel = Label(top, text='名称：', font=FT(12))
     namel.place(x=10, y=10)
-    namee = Entry(top, bootstyle=SECONDARY)
+    namee = Entry(top, bootstyle=SECONDARY, width=12)
     namee.place(x=60, y=10)
-    # 把用到的 Label 和 Entry 收集起来，方便读取并保存至 JSON
+    # 把用到的 Label 和 StringVar 收集起来，方便读取并保存至 JSON
     widgets = []
     add('zh ch sh', 130, 10, 50, SUCCESS, 'zh ch sh')
-    add('韵母', 850, 270, 10, INFO, 'a o e i u ü ai ei ui ao ou iu ie üe an en in un ün ang eng ing ong ia ua uo uai')
-    add('韵母', 250, 10, 190, INFO, 'iao ian uan üan iang uang iong')
-    add('零声母', 400, 10, 450, DANGER, '_a _o _e _ai _ei _ao _ou _er _an _en _ang _eng')
-    Checkbutton(top, text='禁止 jqxy 后的 ü 使用 u', font=FT(12), variable=(notuv := BooleanVar(value=False))).place(x=120, y=860)
-    createb = Button(top, text='创建', command=create, bootstyle=OL(SUCCESS))
-    createb.place(x=10, y=860)
-    cancelb = Button(top, text='取消', command=top.destroy, bootstyle=OL(SECONDARY))
-    cancelb.place(x=68, y=860)
+    add('韵母', 250, 10, 190, PRIMARY, 'a o e i u ü ai')
+    add('韵母', 430, 180, 10, PRIMARY, 'iao ian uan üan iang uang iong ei ui ao ou iu ie')
+    add('韵母', 460, 350, 10, PRIMARY, 'üe an en in un ün ang eng ing ong ia ua uo uai')
+    add('零声母', 400, 520, 10, DANGER, '_a _o _e _ai _ei _ao _ou _er _an _en _ang _eng')
+    notuv = BooleanVar(value=False)
+    notucb = Checkbutton(top, text='禁止 jqxy 后的 ü 使用 u', font=FT(12), variable=notuv)
+    notucb.place(x=520, y=430)
+    createb = Button(top, text='保存', command=create, bootstyle=OL(SUCCESS))
+    createb.place(x=690, y=10)
+    clearb = Button(top, text='清空', command=clear, bootstyle=OL(SECONDARY))
+    clearb.place(x=690, y=50)
+    # 专门记录发生的异常情况（目前只有一种）
+    statusl = Label(top, font=FT(12), bootstyle=DANGER)
+    statusl.place(x=750, y=10)
     top.mainloop()
 
 def update_alpha(*_) -> None:
@@ -444,11 +464,10 @@ zerol.place(x=10, y=330)
 # 由于下拉选择也需要用到表示双拼方案的 StringVar，下拉选择只能写在最后
 Label(keymapf, text='请选择双拼方案：', font=FT(16)).place(x=10, y=10)
 # 使用 StringVar 记录菜单的选项
-planv = StringVar()
+planv = StringVar(value='小鹤双拼')
 # 'write' 表示当 Var 被修改时调用的函数，lambda 内容为找到对应的双拼方案并绘制键位图
-# 这里的 lambda 函数不能直接写“GP().draw_keys”，因为这种方式每次的 GP() 其实并没有被执行
-planv.trace_add('write', lambda *_: GP().draw_keys())
-planv.set('小鹤双拼')
+planv.trace_add('write', lambda *_: PL().apply())
+PL().draw_keys()
 # 下拉菜单（让下拉菜单永远“认准”这个 StringVar，它的数据会和 StringVar 绑定）
 plano = OptionMenu(keymapf, planv, None, *plans, bootstyle=OL(WARNING))
 plano.place(x=190, y=10)
@@ -470,13 +489,14 @@ find2e.place(x=10, y=10)
 find2l = Label(find2lf, text='-', font=FT(12), bootstyle=PRIMARY)
 find2l.place(x=180, y=10)
 find2lf.place(x=140, y=400)
-# 汉字 -> 对应按键
-find3l = Label(keymapf, text='寻找汉字对应的按键：\n（按键可能不唯一）', font=FT(14), bootstyle=INFO)
-find3l.place(x=140, y=490)
-find3e = Entry(keymapf, bootstyle=INFO)
-find3e.place(x=330, y=490)
-find3b = Button(keymapf, text='寻找', command=get_codes, bootstyle=OL(INFO))
-find3b.place(x=500, y=490)
+find3lf = Labelframe(keymapf, text='拼音 -> 按键', width=500, height=70, bootstyle=SUCCESS)
+find3v = StringVar()
+find3v.trace_add('write', get_codes)
+find3e = Entry(find3lf, textvariable=find3v, bootstyle=SUCCESS)
+find3e.place(x=10, y=10)
+find3l = Label(find3lf, text='-', font=FT(12), bootstyle=SUCCESS)
+find3l.place(x=180, y=10)
+find3lf.place(x=140, y=490)
 
 # 练习界面
 practicef = Frame(window, width=1000, height=700)
@@ -498,12 +518,11 @@ keytipcb.place(x=430, y=20)
 recordcb = Checkbutton(practicef, text='启用练习记录', variable=(recordv := BooleanVar()))
 recordcb.place(x=510, y=20)
 recordlf = Labelframe(practicef, text='练习记录', width=400, height=310, bootstyle=SUCCESS)
-recordst = ScrolledText(recordlf, width=50, height=15)
+# 要设置 state=DISABLED 以防止用户自行更改
+recordst = ScrolledText(recordlf, width=50, height=15, state=DISABLED)
 recordst.tag_config('correct', foreground='#008000')
 recordst.tag_config('wrong', foreground='#ff0000')
 recordst.insert(END, '序号\t拼音\t输入内容\t是否正确\n')
-# 要设置 state=DISABLED 以防止用户自行更改
-recordst.config(state=DISABLED)
 recordst.place(x=10, y=10)
 recordlf.place(x=430, y=50)
 random_char()
@@ -553,7 +572,7 @@ msglf.place(x=10, y=250)
 aboutlf = Labelframe(settingsf, text='关于程序', width=980, height=110)
 versionl = Label(aboutlf, text=f'DoublePinyin Trainer V{VERSION_S}', font=FT(12))
 versionl.place(x=10, y=10)
-updateb = Button(aboutlf, text='检查更新（未完工，作者仍未放弃）', bootstyle=OL(INFO), state=DISABLED)
+updateb = Button(aboutlf, text='检查更新（未完工）', bootstyle=OL(INFO), state=DISABLED)
 updateb.place(x=250, y=10)
 fishcb = Button(aboutlf, text='↪ FishC', command=lambda: OT('https://fishc.com.cn/thread-249454-1-1.html'), bootstyle=OL(DANGER))
 fishcb.place(x=10, y=50)

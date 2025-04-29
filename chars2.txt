@@ -79,7 +79,7 @@ dun 吨
 duo 多夺朵
 e 呃恶
 ei 欸诶
-en 恩摁嗯
+en 恩摁
 eng 鞥
 er 二儿尔
 fa 乏伐
@@ -120,6 +120,7 @@ he 何合
 hei 嘿黑
 hen 很
 heng 哼横
+hm 噷
 hong 哄红
 hou 侯候厚后
 hu 乎户
@@ -218,6 +219,7 @@ ne 呢
 nei 内
 nen 嫩
 neng 能
+ng 嗯
 ni 你倪逆
 nian 年念
 niang 娘酿
@@ -384,7 +386,7 @@ ze 择泽
 zei 贼
 zen 怎
 zeng 増
-zha 乍
+zha 炸
 zhai 债
 zhan 战站
 zhang 丈
