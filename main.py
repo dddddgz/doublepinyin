@@ -46,7 +46,7 @@ def read(file: str) -> str:
         logger.error(f'找不到程序所需的文件 {file}')
         exit()
 
-VERSION_S = '1.5.0'                                         # 当前程序版本（字符串形式）
+VERSION_S = '1.5.1'                                         # 当前程序版本
 BOOTSTYLES = [PRIMARY, SECONDARY, SUCCESS, INFO, WARNING, DANGER, LIGHT, DARK]  # 所有可用的 Bootstyle 样式
 KEYS = set('qwertyuiopasdfghjkl;zxcvbnm')                   # 所有可被程序识别的按键
 SHENGS1 = set('bpmfdtnlgkhjqxzcsryw')                       # 所有单个字母的声母
@@ -606,7 +606,7 @@ msglf.place(x=10, y=250)
 aboutlf = Labelframe(settingsf, text='关于程序', width=980, height=110)
 versionl = Label(aboutlf, text=f'DoublePinyin Trainer V{VERSION_S}', font=FT(12))
 versionl.place(x=10, y=10)
-updateb = Button(aboutlf, text='检查更新（未完工）', bootstyle=OL(INFO), state=DISABLED)
+updateb = Button(aboutlf, text='检查更新（对这个功能仍旧没有死心）', bootstyle=OL(INFO), state=DISABLED)
 updateb.place(x=250, y=10)
 fishcb = Button(aboutlf, text='↪ FishC', command=lambda: OT('https://fishc.com.cn/thread-249454-1-1.html'), bootstyle=OL(DANGER))
 fishcb.place(x=10, y=50)
